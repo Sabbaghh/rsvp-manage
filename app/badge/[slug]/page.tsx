@@ -17,6 +17,7 @@ type RSVPEntry = {
   country: string;
   attendance: string;
   hall: string;
+  color?: string;
 };
 
 export default function BadgePage() {
@@ -29,6 +30,7 @@ export default function BadgePage() {
     // Retrieve user data from localStorage
     const slug = params.slug as string;
     const userData = localStorage.getItem(`badge-${slug}`);
+    console.log('Retrieved badge data for', slug, userData);
 
     if (userData) {
       setUser(JSON.parse(userData));
@@ -67,7 +69,12 @@ export default function BadgePage() {
           <div className="w-3/4 h-12 flex justify-center items-center mt-[70%] ">
             <p className="text-black font-bold">{user.name}</p>
           </div>
-          <div className="bg-[#E8C160] w-[90%] h-12 flex justify-center items-center ">
+          <div
+            style={{ background: user.color }}
+            className={`bg-[${
+              user.color || '#E8C160'
+            }] w-[90%] h-12 flex justify-center items-center `}
+          >
             <p className="text-white font-bold uppercase">{user.hall}</p>
           </div>
         </div>

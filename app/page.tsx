@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import axios from 'axios';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -40,7 +41,7 @@ import {
   Printer,
 } from 'lucide-react';
 
-// Mock data type
+// Data types
 type RSVPEntry = {
   uid: string;
   name: string;
@@ -54,49 +55,27 @@ type RSVPEntry = {
   hall: string;
 };
 
-// Mock data
-const initialData: RSVPEntry[] = [
-  {
-    uid: '1',
-    name: 'Alex Chen',
-    email: 'alex.chen@example.com',
-    phone: '+1-555-0123',
-    organization: 'Vercel Inc.',
-    department: 'Engineering',
-    job_title: 'Senior Developer',
-    country: 'USA',
-    attendance: 'Confirmed',
-    hall: 'Hall A',
-  },
-  {
-    uid: '2',
-    name: 'Sarah Johnson',
-    email: 'sarah.j@example.com',
-    phone: '+1-555-0456',
-    organization: 'Tech Innovations',
-    department: 'Product',
-    job_title: 'Product Manager',
-    country: 'Canada',
-    attendance: 'Pending',
-    hall: 'Hall B',
-  },
-  {
-    uid: '3',
-    name: 'Michael Lee',
-    email: 'mlee@example.com',
-    phone: '+44-555-0789',
-    organization: 'Global Systems',
-    department: 'Operations',
-    job_title: 'Director',
-    country: 'UK',
-    attendance: 'Confirmed',
-    hall: 'Hall C',
-  },
-];
+type Hall = {
+  id: number;
+  name: string;
+  capacity: number;
+  availability: number;
+};
+
+const VISITORS_API = 'https://ecce.up.railway.app/api/visitors';
+const HALLS_API = 'https://ecce.up.railway.app/api/halls';
+
+const hallColors: { [key: string]: string } = {
+  'Green Hall': '#27AE60',
+  'Purple Hall': '#8E44AD',
+  'Yellow Hall': '#F1C40F',
+  'Blue Hall': '#3498DB',
+};
 
 export default function RSVPManagement() {
   const router = useRouter();
-  const [users, setUsers] = useState<RSVPEntry[]>(initialData);
+  const [users, setUsers] = useState<RSVPEntry[]>([]);
+  const [halls, setHalls] = useState<Hall[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -112,6 +91,45 @@ export default function RSVPManagement() {
     attendance: '',
     hall: '',
   });
+
+  const fetchHalls = () => {
+    axios
+      .get(HALLS_API)
+      .then((res) => setHalls(res.data))
+      .catch((err) => console.error(err));
+  };
+
+  const fetchVisitors = () => {
+    axios
+      .get(VISITORS_API)
+      .then((res) => {
+        setUsers(
+          res.data.map((item: any) => ({
+            uid: item.id.toString(),
+            name: item.name || '',
+            email: item.email || '',
+            phone: item.phone || '',
+            organization: item.organization || '',
+            department: item.department || '',
+            job_title: item.job_title || '',
+            country: item.country || '',
+            attendance: item.attendance === '1' ? 'Confirmed' : 'Pending',
+            hall: halls.find((h) => h.id === item.hall)?.name || '',
+          })),
+        );
+      })
+      .catch((err) => console.error(err));
+  };
+
+  useEffect(() => {
+    fetchHalls();
+  }, []);
+
+  useEffect(() => {
+    if (halls.length > 0) {
+      fetchVisitors();
+    }
+  }, [halls]);
 
   // Filter users by name
   const filteredUsers = users.filter((user) =>
@@ -135,7 +153,15 @@ export default function RSVPManagement() {
 
   // Remove user
   const handleRemove = (uid: string) => {
-    setUsers(users.filter((user) => user.uid !== uid));
+    axios
+      .delete(`${VISITORS_API}/${uid}`)
+      .then(() => {
+        setUsers(users.filter((user) => user.uid !== uid));
+      })
+      .catch((err) => {
+        console.error(err);
+        alert('Failed to delete user');
+      });
   };
 
   const generateSlug = (name: string, hall: string) => {
@@ -152,59 +178,77 @@ export default function RSVPManagement() {
 
   const handlePrint = (user: RSVPEntry) => {
     const slug = generateSlug(user.name, user.hall);
-    // Store user data in localStorage so badge page can access it
-    localStorage.setItem(`badge-${slug}`, JSON.stringify(user));
+    const color = hallColors[user.hall] || '#c8ff00';
+    const storedData = { ...user, color };
+    localStorage.setItem(`badge-${slug}`, JSON.stringify(storedData));
+    console.log('Stored badge data for', slug, storedData);
     router.push(`/badge/${slug}`);
   };
 
   const handleAddUser = () => {
-    if (!newUser.name || !newUser.email) {
+    if (!newUser.name) {
       alert('Name and email are required');
       return;
     }
 
-    const user: RSVPEntry = {
-      uid: Date.now().toString(),
-      name: newUser.name || '',
-      email: newUser.email || '',
-      phone: newUser.phone || '',
-      organization: newUser.organization || '',
-      department: newUser.department || '',
-      job_title: newUser.job_title || '',
-      country: newUser.country || '',
-      attendance: newUser.attendance || '',
-      hall: newUser.hall || '',
+    const hallId = halls.find((h) => h.name === newUser.hall)?.id || null;
+    const attendanceValue =
+      newUser.attendance?.toLowerCase() === 'confirmed' ? '1' : null;
+
+    const body = {
+      name: newUser.name,
+      email: newUser.email || null,
+      phone: newUser.phone || null,
+      organization: newUser.organization || null,
+      department: newUser.department || null,
+      job_title: newUser.job_title || null,
+      country: newUser.country || null,
+      attendance: attendanceValue,
+      hall: hallId,
     };
 
-    setUsers([...users, user]);
-    setIsDialogOpen(false);
-    setNewUser({
-      name: '',
-      email: '',
-      phone: '',
-      organization: '',
-      department: '',
-      job_title: '',
-      country: '',
-      attendance: '',
-      hall: '',
-    });
+    axios
+      .post(VISITORS_API, body)
+      .then((res) => {
+        const newItem = res.data;
+        const addedUser: RSVPEntry = {
+          uid: newItem.id.toString(),
+          name: newItem.name || '',
+          email: newItem.email || '',
+          phone: newItem.phone || '',
+          organization: newItem.organization || '',
+          department: newItem.department || '',
+          job_title: newItem.job_title || '',
+          country: newItem.country || '',
+          attendance: newItem.attendance === '1' ? 'Confirmed' : 'Pending',
+          hall: halls.find((h) => h.id === newItem.hall)?.name || '',
+        };
 
-    // Auto-print after adding user
-    setTimeout(() => {
-      handlePrint(user);
-    }, 100);
+        setUsers([...users, addedUser]);
+        setIsDialogOpen(false);
+        setNewUser({
+          name: '',
+          email: '',
+          phone: '',
+          organization: '',
+          department: '',
+          job_title: '',
+          country: '',
+          attendance: '',
+          hall: '',
+        });
+
+        setTimeout(() => handlePrint(addedUser), 100);
+      })
+      .catch((err) => {
+        console.error(err);
+        alert('Failed to add user');
+      });
   };
 
   return (
     <div className="min-h-screen bg-background p-6 md:p-10">
       <div className="mx-auto max-w-7xl">
-        {/* Header */}
-        {/* <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground mb-2">RSVP Management</h1>
-          <p className="text-muted-foreground">Manage event attendees and track registrations</p>
-        </div> */}
-
         {/* Controls */}
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           {/* Search */}
@@ -346,9 +390,11 @@ export default function RSVPManagement() {
                       <SelectValue placeholder="Select a hall" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Hall A">Hall A</SelectItem>
-                      <SelectItem value="Hall B">Hall B</SelectItem>
-                      <SelectItem value="Hall C">Hall C</SelectItem>
+                      {halls.map((hall) => (
+                        <SelectItem key={hall.id} value={hall.name}>
+                          {hall.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
