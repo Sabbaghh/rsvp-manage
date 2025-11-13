@@ -463,13 +463,13 @@ export default function RSVPManagement() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>Phone</TableHead>
+                  {/* <TableHead>Phone</TableHead> */}
                   <TableHead>Organization</TableHead>
-                  <TableHead>Job Title</TableHead>
-                  <TableHead>Attendance</TableHead>
+                  {/* <TableHead>Job Title</TableHead>
+                  <TableHead>Attendance</TableHead> */}
                   <TableHead>Hall</TableHead>
-                  <TableHead>UID</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  {/* <TableHead>UID</TableHead> */}
+                  {/* <TableHead className="text-right">Actions</TableHead> */}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -487,14 +487,14 @@ export default function RSVPManagement() {
                     <TableRow key={user.uid}>
                       <TableCell className="font-medium">{user.name}</TableCell>
                       <TableCell>{user.email}</TableCell>
-                      <TableCell>{user.phone}</TableCell>
+                      {/* <TableCell>{user.phone}</TableCell> */}
                       <TableCell>{user.organization}</TableCell>
-                      <TableCell>{user.job_title}</TableCell>
-                      <TableCell>{user.attendance}</TableCell>
+                      {/* <TableCell>{user.job_title}</TableCell>
+                      <TableCell>{user.attendance}</TableCell> */}
                       <TableCell>{user.hall}</TableCell>
-                      <TableCell className="text-muted-foreground">
+                      {/* <TableCell className="text-muted-foreground">
                         {user.uid}
-                      </TableCell>
+                      </TableCell> */}
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Button
