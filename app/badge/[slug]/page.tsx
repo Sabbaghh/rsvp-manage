@@ -66,7 +66,7 @@ export default function BadgePage() {
       <div className="flex w-full h-1/2 flex-row">
         <div className="flex-1 relative flex flex-col justify-center items-center">
           <Image src="/Bagde.svg" alt="badge" fill objectFit="contain" />
-          <div className="w-3/4  h-12 flex justify-center items-center mt-[60%] mb-[10%] ">
+          <div className="w-3/4  h-12 flex justify-center items-center mt-[50%] mb-[20%] ">
             <p className="text-black text-2xl font-bold capitalize">
               {user.name}
             </p>
@@ -75,9 +75,11 @@ export default function BadgePage() {
             style={{ background: user.color }}
             className={`bg-[${
               user.color || '#E8C160'
-            }] w-[90%] h-12 flex justify-center items-center `}
+            }] w-[90%] h-20 flex justify-center items-center `}
           >
-            <p className="text-white font-bold uppercase">{user.hall}</p>
+            <p className="text-white font-bold uppercase text-2xl">
+              {user.hall}
+            </p>
           </div>
         </div>
 
