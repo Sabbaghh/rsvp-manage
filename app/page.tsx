@@ -39,6 +39,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Printer,
+  Pencil,
 } from 'lucide-react';
 
 // Data types
@@ -48,9 +49,7 @@ type RSVPEntry = {
   email: string;
   phone: string;
   organization: string;
-  department: string;
   job_title: string;
-  country: string;
   attendance: string;
   hall: string;
 };
@@ -78,6 +77,9 @@ export default function RSVPManagement() {
   const [halls, setHalls] = useState<Hall[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<RSVPEntry | null>(null);
+  const [editHall, setEditHall] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [recordsPerPage, setRecordsPerPage] = useState(10);
   const [newUser, setNewUser] = useState<Partial<RSVPEntry>>({
@@ -85,9 +87,7 @@ export default function RSVPManagement() {
     email: '',
     phone: '',
     organization: '',
-    department: '',
     job_title: '',
-    country: '',
     attendance: '',
     hall: '',
   });
@@ -110,9 +110,7 @@ export default function RSVPManagement() {
             email: item.email || '',
             phone: item.phone || '',
             organization: item.organization || '',
-            department: item.department || '',
             job_title: item.job_title || '',
-            country: item.country || '',
             attendance: item.attendance === '1' ? 'Confirmed' : 'Pending',
             hall: halls.find((h) => h.id === item.hall)?.name || '',
           })),
@@ -186,8 +184,8 @@ export default function RSVPManagement() {
   };
 
   const handleAddUser = () => {
-    if (!newUser.name) {
-      alert('Name and email are required');
+    if (!newUser.name || !newUser.email || !newUser.hall) {
+      alert('Name, email, and hall are required');
       return;
     }
 
@@ -200,9 +198,9 @@ export default function RSVPManagement() {
       email: newUser.email || null,
       phone: newUser.phone || null,
       organization: newUser.organization || null,
-      department: newUser.department || null,
+      department: null,
       job_title: newUser.job_title || null,
-      country: newUser.country || null,
+      country: null,
       attendance: attendanceValue,
       hall: hallId,
     };
@@ -217,13 +215,10 @@ export default function RSVPManagement() {
           email: newItem.email || '',
           phone: newItem.phone || '',
           organization: newItem.organization || '',
-          department: newItem.department || '',
           job_title: newItem.job_title || '',
-          country: newItem.country || '',
           attendance: newItem.attendance === '1' ? 'Confirmed' : 'Pending',
           hall: halls.find((h) => h.id === newItem.hall)?.name || '',
         };
-
         setUsers([...users, addedUser]);
         setIsDialogOpen(false);
         setNewUser({
@@ -231,19 +226,53 @@ export default function RSVPManagement() {
           email: '',
           phone: '',
           organization: '',
-          department: '',
           job_title: '',
-          country: '',
           attendance: '',
           hall: '',
         });
-
+        fetchHalls();
         setTimeout(() => handlePrint(addedUser), 100);
       })
       .catch((err) => {
         console.error(err);
         alert('Failed to add user');
       });
+  };
+
+  const handleEditUser = () => {
+    if (!editingUser) return;
+
+    const hallId = halls.find((h) => h.name === editHall)?.id || null;
+
+    axios
+      .put(`${VISITORS_API}/${editingUser.uid}`, {
+        id: Number.parseInt(editingUser.uid),
+        hall: hallId,
+      })
+      .then(() => {
+        const updatedUser = { ...editingUser, hall: editHall };
+        setUsers(
+          users.map((user) =>
+            user.uid === editingUser.uid ? updatedUser : user,
+          ),
+        );
+        setIsEditDialogOpen(false);
+        setEditingUser(null);
+        setEditHall('');
+        fetchHalls();
+        setTimeout(() => handlePrint(updatedUser), 100);
+      })
+      .catch((err) => {
+        console.error(err);
+        alert('Failed to update user');
+      });
+  };
+
+  const openEditDialog = (user: RSVPEntry) => {
+    fetchHalls();
+    setEditingUser(user);
+    setEditHall(user.hall);
+    setIsEditDialogOpen(true);
   };
 
   return (
@@ -264,7 +293,13 @@ export default function RSVPManagement() {
           </div>
 
           {/* Add User Dialog */}
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <Dialog
+            open={isDialogOpen}
+            onOpenChange={(open) => {
+              setIsDialogOpen(open);
+              if (open) fetchHalls();
+            }}
+          >
             <DialogTrigger asChild>
               <Button className="gap-2">
                 <Plus className="h-4 w-4" />
@@ -275,11 +310,10 @@ export default function RSVPManagement() {
               <DialogHeader>
                 <DialogTitle>Add New User</DialogTitle>
                 <DialogDescription>
-                  Enter the details for the new attendee. Name and email are
+                  Enter the details for the new attendee. All fields are
                   required.
                 </DialogDescription>
               </DialogHeader>
-
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
                   <Label htmlFor="name">Name *</Label>
@@ -292,7 +326,6 @@ export default function RSVPManagement() {
                     placeholder="John Doe"
                   />
                 </div>
-
                 <div className="grid gap-2">
                   <Label htmlFor="email">Email *</Label>
                   <Input
@@ -305,7 +338,6 @@ export default function RSVPManagement() {
                     placeholder="john.doe@example.com"
                   />
                 </div>
-
                 <div className="grid gap-2">
                   <Label htmlFor="phone">Phone</Label>
                   <Input
@@ -317,7 +349,6 @@ export default function RSVPManagement() {
                     placeholder="+1-555-0123"
                   />
                 </div>
-
                 <div className="grid gap-2">
                   <Label htmlFor="organization">Organization</Label>
                   <Input
@@ -329,19 +360,6 @@ export default function RSVPManagement() {
                     placeholder="Company Name"
                   />
                 </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="department">Department</Label>
-                  <Input
-                    id="department"
-                    value={newUser.department}
-                    onChange={(e) =>
-                      setNewUser({ ...newUser, department: e.target.value })
-                    }
-                    placeholder="Engineering"
-                  />
-                </div>
-
                 <div className="grid gap-2">
                   <Label htmlFor="job_title">Job Title</Label>
                   <Input
@@ -353,19 +371,6 @@ export default function RSVPManagement() {
                     placeholder="Software Engineer"
                   />
                 </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="country">Country</Label>
-                  <Input
-                    id="country"
-                    value={newUser.country}
-                    onChange={(e) =>
-                      setNewUser({ ...newUser, country: e.target.value })
-                    }
-                    placeholder="USA"
-                  />
-                </div>
-
                 <div className="grid gap-2">
                   <Label htmlFor="attendance">Attendance</Label>
                   <Input
@@ -377,9 +382,8 @@ export default function RSVPManagement() {
                     placeholder="Confirmed"
                   />
                 </div>
-
                 <div className="grid gap-2">
-                  <Label htmlFor="hall">Hall (Optional)</Label>
+                  <Label htmlFor="hall">Hall *</Label>
                   <Select
                     value={newUser.hall}
                     onValueChange={(value) =>
@@ -399,7 +403,6 @@ export default function RSVPManagement() {
                   </Select>
                 </div>
               </div>
-
               <DialogFooter>
                 <Button
                   variant="outline"
@@ -413,6 +416,45 @@ export default function RSVPManagement() {
           </Dialog>
         </div>
 
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>{editingUser?.name}</DialogTitle>
+              {/* <DialogDescription>{editingUser?.name}</DialogDescription> */}
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="edit-hall">Hall</Label>
+                <Select value={editHall} onValueChange={setEditHall}>
+                  <SelectTrigger id="edit-hall">
+                    <SelectValue placeholder="Select a hall" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {halls.map((hall) => (
+                      <SelectItem key={hall.id} value={hall.name}>
+                        {hall.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsEditDialogOpen(false);
+                  setEditingUser(null);
+                  setEditHall('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleEditUser}>Update Hall</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {/* Table */}
         <div className="rounded-lg border border-border bg-card">
           <div className="overflow-x-auto">
@@ -423,9 +465,7 @@ export default function RSVPManagement() {
                   <TableHead>Email</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Organization</TableHead>
-                  <TableHead>Department</TableHead>
                   <TableHead>Job Title</TableHead>
-                  <TableHead>Country</TableHead>
                   <TableHead>Attendance</TableHead>
                   <TableHead>Hall</TableHead>
                   <TableHead>UID</TableHead>
@@ -436,7 +476,7 @@ export default function RSVPManagement() {
                 {paginatedUsers.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={11}
+                      colSpan={9}
                       className="text-center text-muted-foreground py-8"
                     >
                       No users found
@@ -449,9 +489,7 @@ export default function RSVPManagement() {
                       <TableCell>{user.email}</TableCell>
                       <TableCell>{user.phone}</TableCell>
                       <TableCell>{user.organization}</TableCell>
-                      <TableCell>{user.department}</TableCell>
                       <TableCell>{user.job_title}</TableCell>
-                      <TableCell>{user.country}</TableCell>
                       <TableCell>{user.attendance}</TableCell>
                       <TableCell>{user.hall}</TableCell>
                       <TableCell className="text-muted-foreground">
@@ -462,12 +500,23 @@ export default function RSVPManagement() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handlePrint(user)}
+                            onClick={() => openEditDialog(user)}
                             className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
                           >
-                            <Printer className="h-4 w-4" />
-                            <span className="sr-only">Print badge</span>
+                            <Pencil className="h-4 w-4" />
+                            <span className="sr-only">Edit hall</span>
                           </Button>
+                          {user.hall && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handlePrint(user)}
+                              className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+                            >
+                              <Printer className="h-4 w-4" />
+                              <span className="sr-only">Print badge</span>
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"
