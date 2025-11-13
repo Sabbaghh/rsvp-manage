@@ -66,8 +66,8 @@ export default function BadgePage() {
       <div className="flex w-full h-1/2 flex-row">
         <div className="flex-1 relative flex flex-col justify-center items-center">
           <Image src="/Bagde.svg" alt="badge" fill objectFit="contain" />
-          <div className="w-3/4  h-12 flex justify-center items-center mt-[50%] mb-[20%] ">
-            <p className="text-black text-2xl font-bold capitalize">
+          <div className="w-3/4  h-12 flex justify-center items-center mt-[50%] mb-[30%] ">
+            <p className="text-black text-center text-2xl font-bold capitalize">
               {user.name}
             </p>
           </div>
