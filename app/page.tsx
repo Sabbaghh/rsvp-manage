@@ -184,8 +184,8 @@ export default function RSVPManagement() {
   };
 
   const handleAddUser = () => {
-    if (!newUser.name || !newUser.email || !newUser.hall) {
-      alert('Name, email, and hall are required');
+    if (!newUser.name || !newUser.hall) {
+      alert('Name, and hall are required');
       return;
     }
 
